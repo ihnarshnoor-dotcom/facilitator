@@ -1,0 +1,5 @@
+{
+  "functions": {
+    "api/[site]/[action].js": { "maxDuration": 60 }
+  }
+}

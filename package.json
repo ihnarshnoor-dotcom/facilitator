@@ -1,0 +1,19 @@
+{
+  "name": "facilitator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-site API that keeps AI and mailer keys off websites and does the work on their behalf.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "local": "node local-server.js"
+  },
+  "dependencies": {
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
+    "groq-sdk": "^1.6.0",
+    "zod": "^4.6.7"
+  }
+}
