@@ -12,6 +12,7 @@ Sites: **Dulhaniyaa** (dulahiya.com). SuperFarmFresh comes later.
 | GET | `/api/dulhaniyaa/services` | Rate card (cached at the edge for 5 min) |
 | POST | `/api/dulhaniyaa/plan` | AI plan + server-calculated estimate (5/min per IP) |
 | POST | `/api/dulhaniyaa/lead` | Emails the enquiry to Dulhaniyaa's inbox (3/min per IP) |
+| POST | `/api/dulhaniyaa/chat` | AI chat reply for the website chat widget (15/min per IP) |
 
 Errors are always JSON: `{ "error": "..." }`, with status codes 400 / 403 / 404 / 405 / 429 / 500 / 502.
 
@@ -70,6 +71,11 @@ curl -s -X POST $BASE/api/dulhaniyaa/lead \
     "selectedIds": ["decor_stage","cat_standard_menu"]
   }'
 
+# Chat (send the whole conversation each time; last message must be from the user)
+curl -s -X POST $BASE/api/dulhaniyaa/chat \
+  -H "Content-Type: application/json" -H "Origin: $ORIGIN" \
+  -d '{ "messages": [ { "role": "user", "content": "What should we plan for a Sangeet night?" } ] }'
+
 # Should fail
 curl -si $BASE/api/dulhaniyaa/services -H "Origin: https://superfarmfresh.com" | head -1   # 403
 curl -si $BASE/api/nope/plan | head -1                                                   # 404
@@ -84,14 +90,15 @@ Every request and every third-party call (Groq, Web3Forms, Upstash) is logged by
 
 | Service | What is logged |
 |---|---|
-| `http` | method, status, duration, origin, and the error for 4xx/5xx |
+| `http incoming` | method, path, origin, client IP, user agent, and the request body |
+| `http outgoing` | method, status, duration, origin, the error for 4xx/5xx, and the response body |
 | `groq` | model, attempt, the prompt, the raw AI reply, token usage, finish reason, duration, retries and errors |
 | `web3forms` | subject, name, phone, email, the message, Web3Forms' status and reply, duration |
 | `upstash` | errors always; each call at `LOG_LEVEL=debug` |
 
 Locally the logs print as readable blocks in the `npm run local` terminal. On Vercel each log is one JSON line, which you can search under **Project → Logs**.
 
-API keys are never logged. Fields named like `*_key`/`secret`/`password` and values that look like `gsk_…` or `Bearer …` are redacted automatically. Prompts, AI replies and emails **do** contain customer names and phone numbers. Set `LOG_PAYLOADS=false` in production if you don't want that in your logs.
+API keys are never logged. Fields named like `*_key`/`secret`/`password` and values that look like `gsk_…` or `Bearer …` are redacted automatically. Request/response bodies, prompts, AI replies and emails **do** contain customer names and phone numbers. Set `LOG_PAYLOADS=false` in production if you don't want that in your logs.
 
 ## Deploy
 
