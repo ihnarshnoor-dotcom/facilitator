@@ -86,12 +86,17 @@ curl -si -X OPTIONS $BASE/api/dulhaniyaa/plan -H "Origin: $ORIGIN" | head -1    
 
 ## Logs
 
-Every request and every third-party call (Groq, Web3Forms, Upstash) is logged by `lib/log.js`. Each line carries a request id (also returned as the `X-Request-Id` header), so you can follow one website call through all of its third-party calls.
+By default each request prints one line with its endpoint and response status, and nothing else:
+
+```
+POST /api/dulhaniyaa/plan → 200 (1843ms)
+```
+
+5xx lines go to stderr and 4xx lines are warnings, so Vercel colours them. For debugging, set `LOG_LEVEL=debug` (or `info`/`warn`/`error`) to turn on the detailed logs from `lib/log.js` below. Each of those lines carries a request id (also returned as the `X-Request-Id` header), so you can follow one website call through all of its third-party calls.
 
 | Service | What is logged |
 |---|---|
-| `http incoming` | method, path, origin, client IP, user agent, and the request body |
-| `http outgoing` | method, status, duration, origin, the error for 4xx/5xx, and the response body |
+| `http outgoing` | status and the error for 4xx/5xx (at `LOG_LEVEL=debug`) |
 | `groq` | model, attempt, the prompt, the raw AI reply, token usage, finish reason, duration, retries and errors |
 | `web3forms` | subject, name, phone, email, the message, Web3Forms' status and reply, duration |
 | `upstash` | errors always; each call at `LOG_LEVEL=debug` |

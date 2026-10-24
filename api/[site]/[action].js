@@ -2,7 +2,7 @@
 // Looks up the site, runs shared guards, then dispatches to the site's action.
 import { applyCors } from "../../lib/cors.js";
 import { HttpError, clientIp, readJsonBody, sendJson } from "../../lib/http.js";
-import { errorInfo, log, logPayloads, requestId, withRequestContext } from "../../lib/log.js";
+import { errorInfo, log, requestId, withRequestContext } from "../../lib/log.js";
 import { rateLimit } from "../../lib/ratelimit.js";
 import { getSite } from "../../lib/sites.js";
 
@@ -18,24 +18,11 @@ async function route(req, res, siteKey, actionName) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Request-Id", requestId());
 
-  log("info", "http", "incoming", {
-    method: req.method,
-    path: `/api/${siteKey}/${actionName}`,
-    origin: req.headers.origin,
-    ip: clientIp(req),
-    user_agent: req.headers["user-agent"],
-    ...payloadField("body", requestBodyForLog(req)),
-  });
-
+  // The one log line per request: endpoint and response status.
   const finish = (status, body, extra = {}) => {
-    log(status >= 500 ? "error" : status >= 400 ? "warn" : "info", "http", "outgoing", {
-      method: req.method,
-      status,
-      ms: Date.now() - started,
-      origin: req.headers.origin,
-      ...extra,
-      ...payloadField("body", body),
-    });
+    const line = `${req.method} /api/${siteKey}/${actionName} → ${status} (${Date.now() - started}ms)`;
+    (status >= 500 ? console.error : status >= 400 ? console.warn : console.log)(line);
+    log("debug", "http", "outgoing", { status, ...extra });
     if (body === undefined) {
       res.statusCode = status;
       return res.end();
@@ -81,22 +68,5 @@ async function route(req, res, siteKey, actionName) {
       return finish(err.status, { error: err.message, ...err.extra }, { error: err.message, ...err.extra });
     }
     return finish(500, { error: "Internal error" }, { unhandled: errorInfo(err) });
-  }
-}
-
-// Bodies carry customer data, so they're logged in full only when LOG_PAYLOADS allows,
-// otherwise just their size. Serialized so log.js truncates large ones (e.g. the rate card).
-function payloadField(name, value) {
-  if (value === undefined) return {};
-  const json = typeof value === "string" ? value : JSON.stringify(value);
-  return logPayloads() ? { [name]: json } : { [`${name}_chars`]: json.length };
-}
-
-function requestBodyForLog(req) {
-  if (req.method === "GET" || req.method === "OPTIONS") return undefined;
-  try {
-    return readJsonBody(req);
-  } catch {
-    return "(invalid JSON)";
   }
 }
